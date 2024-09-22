@@ -70,7 +70,7 @@ Follow the on-screen prompts to engage in a conversation with the AI. To exit, s
 
 ## Contributing
 
-We welcome contributions! If you have suggestions for improvements or encounter any issues, please feel free to [open an issue](https://github.com/username/repo/issues) or submit a pull request.
+We welcome contributions! If you have suggestions for improvements or encounter any issues, please feel free to [open an issue](https://github.com/majesticio/mage-shell-cli/issues) or submit a pull request.
 
 ## License
 
