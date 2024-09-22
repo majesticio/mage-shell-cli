@@ -39,11 +39,12 @@ Best if added to your `.bashrc` or `.zshrc` file.
 
 # Required Environment Variables
 export MAGE_API_URL="http://<your-llm-server-ip>:11434/v1/chat/completions"
+# export MAGE_API_URL=https://api.openai.com/v1 # If using openai 
 export MAGE_MODEL="mixtral"
 
 # Optional Environment Variables
 export MAGE_MAX_TOKENS=10000                  # Optional; defaults to 10000 if not set
-export MAGE_API_KEY="your_api_key_here"        # Optional; replace with your actual API key
+export MAGE_API_KEY="your_api_key_here"        # Optional; replace with your actual API key for OpenAI
 export MAGE_TEMPERATURE=0.7                    # Optional; omit if not needed
 export MAGE_HISTORY_FILE="$HOME/.chat_history"  # Optional; defaults to ~/.chat_history if not set
 export MAGE_SYSTEM_PROMPT="You are Mage, a specialized AI assistant for technical support."  # Optional
