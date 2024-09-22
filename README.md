@@ -59,5 +59,3 @@ We welcome contributions! If you have suggestions for improvements or encounter 
 `mage.sh` is released under the [MIT License](https://opensource.org/licenses/MIT). See the LICENSE file for more details.
 
 ---
-
-Remember to replace placeholders like `https://raw.githubusercontent.com/username/repo/main/install_mage.sh` with the actual URL to your script, and adjust the sections as necessary to accurately reflect the capabilities and requirements of your `mage.sh` script.
