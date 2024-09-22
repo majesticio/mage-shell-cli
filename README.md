@@ -29,10 +29,27 @@ To install `mage.sh`, run the following command in your terminal:
 ```sh
 curl -sSL https://raw.githubusercontent.com/majesticio/mage-shell-cli/main/install.sh | sudo bash
 ```
+This command fetches the installation script and executes it, handling all necessary setup steps to get `mage.sh` up and running on your system. You will now need to set the environment variables.
 
-This command fetches the installation script and executes it, handling all necessary setup steps to get `mage.sh` up and running on your system.
+### Export your environment variables
+Best if added to your `.bashrc` or `.zshrc` file.
 
-**Note:** Always exercise caution when executing scripts from the internet with root privileges. We encourage you to download and inspect the installation script before running it.
+```sh
+# Mage CLI Configuration
+
+# Required Environment Variables
+export MAGE_API_URL="http://<your-llm-server-ip>:11434/v1/chat/completions"
+export MAGE_MODEL="mixtral"
+
+# Optional Environment Variables
+export MAGE_MAX_TOKENS=10000                  # Optional; defaults to 10000 if not set
+export MAGE_API_KEY="your_api_key_here"        # Optional; replace with your actual API key
+export MAGE_TEMPERATURE=0.7                    # Optional; omit if not needed
+export MAGE_HISTORY_FILE="$HOME/.chat_history"  # Optional; defaults to ~/.chat_history if not set
+export MAGE_SYSTEM_PROMPT="You are Mage, a specialized AI assistant for technical support."  # Optional
+```
+
+After adding to your bash or zsh profile restart the shell or use eg `source ~/.zshrc`
 
 ## Usage
 
