@@ -191,19 +191,8 @@ send_chat_request() {
         local assistant_response
         assistant_response=$(echo "$response" | sed -e 's/HTTP_STATUS.*//' | jq -r '.choices[0].message.content')
 
-        # Save assistant's response to a temporary Markdown file
-        local temp_md_file
-        temp_md_file=$(mktemp)
-        echo "$assistant_response" > "$temp_md_file"
-
-        # Use glow to render the Markdown content if available
-        if command -v glow &> /dev/null; then
-            glow "$temp_md_file"
-        else
-            echo -e "${PURPLE}Notice: 'glow' is not installed. Displaying response as plain text.${NO_COLOR}"
-            cat "$temp_md_file"
-        fi
-        rm "$temp_md_file" # Clean up the temporary Markdown file
+        # Use glow to render the Markdown content directly from the string
+        echo "$assistant_response" | glow -
 
         # Create assistant message JSON
         local assistant_message
@@ -212,6 +201,7 @@ send_chat_request() {
         save_history
     fi
 }
+
 
 # ===============================
 # Main Script Execution
