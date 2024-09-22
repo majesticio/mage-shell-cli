@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-API_URL="http://10.200.200.1:1234/v1/chat/completions"
+API_URL="http://10.200.200.1:11434/v1/chat/completions"
 MODEL="mixtral"
 MAX_TOKENS=10000
 TEMPERATURE=0.7
