@@ -15,6 +15,7 @@ MAX_TOKENS="${MAGE_MAX_TOKENS}"
 # Optional Environment Variables
 API_KEY="${MAGE_API_KEY:-""}"
 TEMPERATURE="${MAGE_TEMPERATURE}"
+SYSTEM_PROMPT="${MAGE_SYSTEM_PROMPT:-"You are an advanced AI assistant. You have a wide range of knowledge on many topics. Make responses formatted in markdown, using various formatting techniques, such as headers, bold and italicized text, code blocks, lists, blockquotes, links etc where appropriate."}"
 
 HISTORY_FILE="${MAGE_HISTORY_FILE:-"$HOME/.mage_history"}"
 
@@ -23,6 +24,7 @@ HISTORY_FILE="${MAGE_HISTORY_FILE:-"$HOME/.mage_history"}"
 # ===============================
 GREEN="\033[0;32m"
 RED="\033[0;31m"
+PURPLE="\033[0;35m"
 NO_COLOR="\033[0m"
 
 # ===============================
@@ -55,10 +57,12 @@ check_required_vars() {
     # TEMPERATURE is optional; no default value is set
 }
 
-# Function to initialize the history file with the system prompt if it doesn't exist
+# Function to initialize the history file with default messages if it doesn't exist
 initialize_history() {
     if [ ! -f "$HISTORY_FILE" ]; then
-        echo "$SYSTEM_PROMPT" > "$HISTORY_FILE"
+        echo '{"role": "system", "content": "'"$SYSTEM_PROMPT"'"}' > "$HISTORY_FILE"
+        echo '{"role": "user", "content": "Hello Mage, follow my instructions carefully and respond briefly in the appropriate format."}' >> "$HISTORY_FILE"
+        echo '{"role": "assistant", "content": "I will do my best to help with whatever you need."}' >> "$HISTORY_FILE"
     fi
 }
 
@@ -152,10 +156,6 @@ send_chat_request() {
         return 1
     fi
 
-    # Debug: Print json_payload (Optional: Comment out in production)
-    # echo "Constructed JSON payload:"
-    # echo "$json_payload"
-
     # Construct curl command
     local curl_command=(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST "$API_URL" \
         -H "Content-Type: application/json")
@@ -244,15 +244,12 @@ check_required_vars
 # ===============================
 # Initialize System Prompt
 # ===============================
-SYSTEM_PROMPT='{
-  "role": "system",
-  "content": "You are an advanced AI assistant. You have a wide range of knowledge on many topics. Make responses formatted in markdown, using various formatting techniques, such as headers, bold and italicized text, code blocks, lists, blockquotes, links etc where appropriate."
-}'
+# The SYSTEM_PROMPT is already set via environment variable or default above
 
 # Initialize conversation history array
 declare -a CONVERSATION_HISTORY=()
 
-# Initialize history file with system prompt if necessary
+# Initialize history file with system prompt and default messages if necessary
 initialize_history
 
 # Load existing history
