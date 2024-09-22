@@ -10,11 +10,11 @@ set -e
 # Required Environment Variables
 API_URL="${MAGE_API_URL}"
 MODEL="${MAGE_MODEL}"
-MAX_TOKENS="${MAGE_MAX_TOKENS}"
 
 # Optional Environment Variables
 API_KEY="${MAGE_API_KEY:-""}"
 TEMPERATURE="${MAGE_TEMPERATURE}"
+MAGE_MAX_TOKENS="${MAGE_MAX_TOKENS:-10000}"  # Default to 10000 if not set
 SYSTEM_PROMPT="${MAGE_SYSTEM_PROMPT:-"You are an advanced AI assistant. You have a wide range of knowledge on many topics. Make responses formatted in markdown, using various formatting techniques, such as headers, bold and italicized text, code blocks, lists, blockquotes, links etc where appropriate."}"
 
 HISTORY_FILE="${MAGE_HISTORY_FILE:-"$HOME/.mage_history"}"
@@ -50,11 +50,7 @@ check_required_vars() {
         error_exit "MAGE_MODEL is not set." "MAGE_MODEL=\"gpt-4\""
     fi
 
-    if [[ -z "$MAX_TOKENS" ]]; then
-        error_exit "MAGE_MAX_TOKENS is not set." "MAGE_MAX_TOKENS=1000"
-    fi
-
-    # TEMPERATURE is optional; no default value is set
+    # MAGE_MAX_TOKENS is now optional with a default value
 }
 
 # Function to initialize the history file with default messages if it doesn't exist
@@ -128,7 +124,7 @@ send_chat_request() {
     if [[ -n "$TEMPERATURE" ]]; then
         json_payload=$(jq -n \
             --arg model "$MODEL" \
-            --argjson max_tokens "$MAX_TOKENS" \
+            --argjson max_tokens "$MAGE_MAX_TOKENS" \
             --argjson temperature "$TEMPERATURE" \
             --argjson messages "$messages_json" \
             '{
@@ -140,7 +136,7 @@ send_chat_request() {
     else
         json_payload=$(jq -n \
             --arg model "$MODEL" \
-            --argjson max_tokens "$MAX_TOKENS" \
+            --argjson max_tokens "$MAGE_MAX_TOKENS" \
             --argjson messages "$messages_json" \
             '{
                 model: $model,
@@ -204,6 +200,7 @@ send_chat_request() {
         if command -v glow &> /dev/null; then
             glow "$temp_md_file"
         else
+            echo -e "${PURPLE}Notice: 'glow' is not installed. Displaying response as plain text.${NO_COLOR}"
             cat "$temp_md_file"
         fi
         rm "$temp_md_file" # Clean up the temporary Markdown file
@@ -242,7 +239,7 @@ fi
 check_required_vars
 
 # ===============================
-# Initialize System Prompt
+# Initialize System Prompt and History
 # ===============================
 # The SYSTEM_PROMPT is already set via environment variable or default above
 
