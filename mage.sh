@@ -1,37 +1,72 @@
 #!/bin/bash
 
-# Configuration
-API_URL="$MAGE_API_URL"
-MODEL="$MAGE_MODEL"
-MAX_TOKENS="$MAGE_MAX_TOKENS"
-TEMPERATURE="$MAGE_TEMPERATURE"
-HISTORY_FILE="$MAGE_HISTORY_FILE"
+# Exit immediately if a command exits with a non-zero status
+set -e
 
-# ANSI Color Codes
+# ===============================
+# Configuration and Environment Variables
+# ===============================
+
+# Required Environment Variables
+API_URL="${MAGE_API_URL}"
+MODEL="${MAGE_MODEL}"
+MAX_TOKENS="${MAGE_MAX_TOKENS}"
+
+# Optional Environment Variables
+API_KEY="${MAGE_API_KEY:-""}"
+TEMPERATURE="${MAGE_TEMPERATURE}"
+
+HISTORY_FILE="${MAGE_HISTORY_FILE:-"$HOME/.mage_history"}"
+
+# ===============================
+# ANSI Color Codes for Output
+# ===============================
 GREEN="\033[0;32m"
-PURPLE="\033[0;35m"
 RED="\033[0;31m"
 NO_COLOR="\033[0m"
 
-# Function to escape strings for JSON
-escape_json() {
-    jq -aRs <<<"$1"
+# ===============================
+# Function Definitions
+# ===============================
+
+# Function to display error messages and exit
+error_exit() {
+    echo -e "${RED}Error: $1${NO_COLOR}"
+    echo "Please set the required environment variables in your shell profile (e.g., ~/.bashrc or ~/.zshrc)."
+    echo "Example:"
+    echo "  export $2"
+    exit 1
 }
 
-# Initialize conversation history array with the system prompt
-SYSTEM_PROMPT='{"role": "system", "content": "You are an advanced AI assistant. You have a wide range of knowledge on many topics. Make responses formatted in markdown, using various formatting techniques, such as headers, bold and italicized text, code blocks, lists, blockquotes, links etc where appropriate."}'
-declare -a CONVERSATION_HISTORY=()
+# Function to check if required environment variables are set
+check_required_vars() {
+    if [[ -z "$API_URL" ]]; then
+        error_exit "MAGE_API_URL is not set." "MAGE_API_URL=\"https://api.example.com/v1/chat/completions\""
+    fi
 
-# Initialize HISTORY_FILE if it doesn't exist
-if [ ! -f "$HISTORY_FILE" ]; then
-    echo "$SYSTEM_PROMPT" > "$HISTORY_FILE"
-fi
+    if [[ -z "$MODEL" ]]; then
+        error_exit "MAGE_MODEL is not set." "MAGE_MODEL=\"gpt-4\""
+    fi
 
-# Load history from file
+    if [[ -z "$MAX_TOKENS" ]]; then
+        error_exit "MAGE_MAX_TOKENS is not set." "MAGE_MAX_TOKENS=1000"
+    fi
+
+    # TEMPERATURE is optional; no default value is set
+}
+
+# Function to initialize the history file with the system prompt if it doesn't exist
+initialize_history() {
+    if [ ! -f "$HISTORY_FILE" ]; then
+        echo "$SYSTEM_PROMPT" > "$HISTORY_FILE"
+    fi
+}
+
+# Function to load history from the history file
 load_history() {
     if [ -f "$HISTORY_FILE" ]; then
         while IFS= read -r line; do
-            if echo "$line" | jq empty; then
+            if echo "$line" | jq empty 2>/dev/null; then
                 CONVERSATION_HISTORY+=("$line")
             else
                 echo -e "${RED}Warning: Skipping invalid JSON line in history.${NO_COLOR}"
@@ -40,12 +75,12 @@ load_history() {
     fi
 }
 
-# Save history to file
+# Function to save history to the history file
 save_history() {
     printf "%s\n" "${CONVERSATION_HISTORY[@]}" > "$HISTORY_FILE"
 }
 
-# Spinner animation
+# Function for spinner animation while waiting for background processes
 spinner() {
     local pid=$1
     local delay=0.1
@@ -60,9 +95,11 @@ spinner() {
     printf "\b"
 }
 
-# Send a chat request with history
+# Function to send chat request to the API
 send_chat_request() {
     local user_input="$1"
+
+    # Create user message JSON
     local user_message
     user_message=$(jq -nc --arg role "user" --arg content "$user_input" '{"role": $role, "content": $content}')
     CONVERSATION_HISTORY+=("$user_message")
@@ -75,10 +112,6 @@ send_chat_request() {
     local messages_json
     messages_json=$(printf "%s\n" "${CONVERSATION_HISTORY[@]}" | jq -s '.')
 
-    # Debug: Print messages_json
-    echo "Constructed messages JSON:"
-    echo "$messages_json"
-
     # Validate messages_json
     if ! echo "$messages_json" | jq empty; then
         echo -e "${RED}Error: Constructed messages JSON is invalid.${NO_COLOR}"
@@ -88,17 +121,29 @@ send_chat_request() {
 
     # Construct the entire JSON payload using jq directly
     local json_payload
-    json_payload=$(jq -n \
-        --arg model "$MODEL" \
-        --argjson max_tokens "$MAX_TOKENS" \
-        --argjson temperature "$TEMPERATURE" \
-        --argjson messages "$messages_json" \
-        '{
-            model: $model,
-            messages: $messages,
-            max_tokens: $max_tokens,
-            temperature: $temperature
-        }')
+    if [[ -n "$TEMPERATURE" ]]; then
+        json_payload=$(jq -n \
+            --arg model "$MODEL" \
+            --argjson max_tokens "$MAX_TOKENS" \
+            --argjson temperature "$TEMPERATURE" \
+            --argjson messages "$messages_json" \
+            '{
+                model: $model,
+                messages: $messages,
+                max_tokens: $max_tokens,
+                temperature: $temperature
+            }')
+    else
+        json_payload=$(jq -n \
+            --arg model "$MODEL" \
+            --argjson max_tokens "$MAX_TOKENS" \
+            --argjson messages "$messages_json" \
+            '{
+                model: $model,
+                messages: $messages,
+                max_tokens: $max_tokens
+            }')
+    fi
 
     # Validate json_payload
     if ! echo "$json_payload" | jq empty; then
@@ -107,14 +152,24 @@ send_chat_request() {
         return 1
     fi
 
-    # Debug: Print json_payload
-    echo "Constructed JSON payload:"
-    echo "$json_payload"
+    # Debug: Print json_payload (Optional: Comment out in production)
+    # echo "Constructed JSON payload:"
+    # echo "$json_payload"
 
-    # Run curl in the background, directing output to the temporary file
-    curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST "$API_URL" \
-        -H "Content-Type: application/json" \
-        -d "$json_payload" > "$temp_response_file" &
+    # Construct curl command
+    local curl_command=(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST "$API_URL" \
+        -H "Content-Type: application/json")
+
+    # Add Authorization header if API_KEY is set
+    if [[ -n "$API_KEY" ]]; then
+        curl_command+=(-H "Authorization: Bearer $API_KEY")
+    fi
+
+    # Add data payload
+    curl_command+=(-d "$json_payload")
+
+    # Execute curl in the background, directing output to the temporary file
+    "${curl_command[@]}" > "$temp_response_file" &
     local curl_pid=$!
 
     # Start spinner for the background curl process
@@ -139,16 +194,21 @@ send_chat_request() {
     else
         local assistant_response
         assistant_response=$(echo "$response" | sed -e 's/HTTP_STATUS.*//' | jq -r '.choices[0].message.content')
-        
+
         # Save assistant's response to a temporary Markdown file
         local temp_md_file
         temp_md_file=$(mktemp)
         echo "$assistant_response" > "$temp_md_file"
-        
-        # Use glow to render the Markdown content
-        glow "$temp_md_file"
+
+        # Use glow to render the Markdown content if available
+        if command -v glow &> /dev/null; then
+            glow "$temp_md_file"
+        else
+            cat "$temp_md_file"
+        fi
         rm "$temp_md_file" # Clean up the temporary Markdown file
 
+        # Create assistant message JSON
         local assistant_message
         assistant_message=$(jq -nc --arg role "assistant" --arg content "$assistant_response" '{"role": $role, "content": $content}')
         CONVERSATION_HISTORY+=("$assistant_message")
@@ -156,16 +216,58 @@ send_chat_request() {
     fi
 }
 
-# Main interaction loop
+# ===============================
+# Main Script Execution
+# ===============================
+
+# ===============================
+# Dependency Checks
+# ===============================
+for cmd in jq curl; do
+    if ! command -v "$cmd" &> /dev/null; then
+        echo -e "${RED}Error: $cmd is not installed.${NO_COLOR}"
+        echo "Please install it using your package manager."
+        exit 1
+    fi
+done
+
+# Check for glow (optional)
+if ! command -v glow &> /dev/null; then
+    echo -e "${PURPLE}Notice: 'glow' is not installed. Markdown responses will be displayed as plain text.${NO_COLOR}"
+fi
+
+# ===============================
+# Validate Required Environment Variables
+# ===============================
+check_required_vars
+
+# ===============================
+# Initialize System Prompt
+# ===============================
+SYSTEM_PROMPT='{
+  "role": "system",
+  "content": "You are an advanced AI assistant. You have a wide range of knowledge on many topics. Make responses formatted in markdown, using various formatting techniques, such as headers, bold and italicized text, code blocks, lists, blockquotes, links etc where appropriate."
+}'
+
+# Initialize conversation history array
+declare -a CONVERSATION_HISTORY=()
+
+# Initialize history file with system prompt if necessary
+initialize_history
+
+# Load existing history
 load_history
+
 echo "Welcome to the Mage CLI. Type 'exit' or 'quit' to end."
 while true; do
     echo -ne "${GREEN}>${NO_COLOR} "
-    read user_input
+    read -r user_input
 
     if [[ "$user_input" =~ ^(exit|quit)$ ]]; then
         echo "Goodbye!"
         break
+    elif [[ -z "$user_input" ]]; then
+        continue  # Skip empty input
     else
         send_chat_request "$user_input"
     fi
