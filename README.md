@@ -3,7 +3,7 @@
 
 ## Overview
 
-`mage.sh` is a command-line interface (CLI) tool designed to enhance your terminal experience by providing quick and intuitive access to a powerful conversational AI. Inspired by the capabilities of modern AI, `mage.sh` allows users to interact with an AI assistant directly from their terminal, offering assistance with a wide range of topics and tasks.
+`mage.sh` is an `openai` compatible command-line interface (CLI) tool designed to enhance your terminal experience by providing quick and intuitive access to a powerful conversational AI. Inspired by the capabilities of modern AI, `mage.sh` allows users to interact with an AI assistant directly from their terminal, offering assistance with a wide range of topics and tasks.
 
 Whether you need help understanding complex concepts, looking for coding assistance, or simply curious about what AI can do, `mage.sh` is your go-to terminal companion.
 
